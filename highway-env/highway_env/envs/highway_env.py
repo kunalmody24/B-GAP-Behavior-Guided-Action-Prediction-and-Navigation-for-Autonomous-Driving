@@ -86,7 +86,7 @@ class HighwayEnv(AbstractEnv):
         # add some aggressive vehicles in the road
         for _ in range(self.config["num_aggressive"]):
             a = np.random.randint(low=1, high=5)
-            if a == 1:
+            if a == 1 or a == 2:
                 self.road.vehicles.append(vehicles_type3.create_random(self.road))
             else:
                 self.road.vehicles.append(vehicles_type2.create_random(self.road))
