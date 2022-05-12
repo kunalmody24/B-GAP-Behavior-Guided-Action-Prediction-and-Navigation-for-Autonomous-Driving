@@ -40,7 +40,11 @@ class HighwayEnv(AbstractEnv):
             "num_aggressive": 0,
             "duration": 40,  # [s]
             "initial_spacing": 1,
-            "collision_reward": self.COLLISION_REWARD
+            "rewards": {
+                "collision_reward": self.COLLISION_REWARD,
+                "right_lane_reward": self.RIGHT_LANE_REWARD,
+                "high_vel_reward": self.HIGH_VELOCITY_REWARD
+            }
         })
         return config
 
@@ -80,19 +84,17 @@ class HighwayEnv(AbstractEnv):
         vehicles_type2 = utils.class_from_path(self.config["aggressive_vehicle_type"])
         vehicles_type3 = utils.class_from_path(self.config["aggressive_vehicle_type2"])
         # add some aggressive vehicles in the road
-        count_aggressive = 0
-        for _ in range(self.config["vehicles_count"]+self.config["num_aggressive"]):
+        for _ in range(self.config["num_aggressive"]):
             a = np.random.randint(low=1, high=5)
-            if a==1:
-                count_aggressive += 1
-                self.road.vehicles.append(vehicles_type2.create_random(self.road))
-                if count_aggressive < 3:
-                    self.road.vehicles.append(vehicles_type3.create_random(self.road))
-                    
+            if a == 1:
+                self.road.vehicles.append(vehicles_type3.create_random(self.road))
             else:
+                self.road.vehicles.append(vehicles_type2.create_random(self.road))
+
+        for _ in range(self.config["vehicles_count"]-self.config["num_aggressive"]):
                 self.road.vehicles.append(vehicles_type1.create_random(self.road))
         
-        print("number of aggressive vehicles ",count_aggressive)
+        print("number of aggressive vehicles ", self.config["num_aggressive"])
 
         # create an empty list and then insert randomly
         
@@ -106,11 +108,11 @@ class HighwayEnv(AbstractEnv):
         action_reward = {0: self.LANE_CHANGE_REWARD, 1: 0, 2: self.LANE_CHANGE_REWARD, 3: 0, 4: 0}
         neighbours = self.road.network.all_side_lanes(self.vehicle.lane_index)
         state_reward = \
-            + self.config["collision_reward"] * self.vehicle.crashed \
-            + self.RIGHT_LANE_REWARD * self.vehicle.target_lane_index[2] / (len(neighbours) - 1) \
-            + self.HIGH_VELOCITY_REWARD * self.vehicle.velocity_index / (self.vehicle.SPEED_COUNT - 1)
+            + self.config["rewards"]["collision_reward"] * self.vehicle.crashed \
+            + self.config["rewards"]["right_lane_reward"] * self.vehicle.target_lane_index[2] / (len(neighbours) - 1) \
+            + self.config["rewards"]["high_vel_reward"] * self.vehicle.velocity_index / (self.vehicle.SPEED_COUNT - 1)
         return utils.remap(action_reward[action] + state_reward,
-                           [self.config["collision_reward"], self.HIGH_VELOCITY_REWARD+self.RIGHT_LANE_REWARD],
+                           [self.config["rewards"]["collision_reward"], self.config["rewards"]["high_vel_reward"]+self.config["rewards"]["right_lane_reward"]],
                            [0, 1])
 
     def _is_terminal(self):

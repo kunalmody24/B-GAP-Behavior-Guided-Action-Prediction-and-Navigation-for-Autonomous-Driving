@@ -116,9 +116,7 @@ class IDMVehicle(ControlledVehicle):
         acceleration = self.COMFORT_ACC_MAX * (
                 1 - np.power(max(ego_vehicle.velocity, 0) / ego_target_velocity, self.DELTA))
 
-        if rear_vehicle:
-            acceleration = -1
-        elif front_vehicle:
+        if front_vehicle:
             d = ego_vehicle.lane_distance_to(front_vehicle)
             acceleration -= self.COMFORT_ACC_MAX * \
                 np.power(self.desired_gap(ego_vehicle, front_vehicle) / utils.not_zero(d), 2)
@@ -679,6 +677,7 @@ class VeryAggressiveCar(ControlledVehicle):
     COMFORT_ACC_MAX = 6.0  # [m/s2]
     COMFORT_ACC_MIN = -9.0  # [m/s2]
     DISTANCE_WANTED = 6.0  # [m]
+    REAR_DISTANCE_WANTED = 15.0 # [m]
     TIME_WANTED = 1.2  # [s]
     DELTA = 5.0  # []
     DELTA_VELOCITY = 10  # [m/s]
@@ -702,6 +701,7 @@ class VeryAggressiveCar(ControlledVehicle):
         super(VeryAggressiveCar, self).__init__(road, position, heading, velocity, target_lane_index, target_velocity, route)
         self.enable_lane_change = enable_lane_change
         self.timer = timer or (np.sum(self.position)*np.pi) % self.LANE_CHANGE_DELAY
+        self.brake_check = False
 
     def randomize_behavior(self):
         pass
@@ -739,22 +739,24 @@ class VeryAggressiveCar(ControlledVehicle):
         if self.enable_lane_change:
             self.change_lane_policy()
         action['steering'] = self.steering_control(self.target_lane_index)
+        if self.brake_check:
+            action['steering'] = self.steering_control(self.lane_index)
 
         # Longitudinal: IDM
         action['acceleration'] = self.acceleration(ego_vehicle=self,
                                                    front_vehicle=front_vehicle,
                                                    rear_vehicle=rear_vehicle)
-        if (self.target_velocity < 20 and self.lane_distance_to(front_vehicle) >= self.LENGTH):
-            self.target_velocity += self.DELTA_VELOCITY
-            action['acceleration'] = self.COMFORT_ACC_MAX
-            action['steering'] = self.steering_control(self.target_lane_index)
+        # if (self.target_velocity < 20 and self.lane_distance_to(front_vehicle) >= self.LENGTH):
+        #     self.target_velocity += self.DELTA_VELOCITY
+        #     action['acceleration'] = self.COMFORT_ACC_MAX
+        #     action['steering'] = self.steering_control(self.target_lane_index)
         
         action['acceleration'] = np.clip(action['acceleration'], -self.ACC_MAX, self.ACC_MAX)
         # if (action['acceleration'] > 0):
         #     action = "FASTER"
         # elif (action['acceleration'] < 0):
         #     action = "SLOWER"
-        super(VeryAggressiveCar, self).act(action)
+        super(ControlledVehicle, self).act(action)
 
     def step(self, dt):
         """
@@ -798,6 +800,13 @@ class VeryAggressiveCar(ControlledVehicle):
             #     acceleration = -self.ACC_MAX
             #     self.target_velocity = 15
         # print("target_velocity", self.target_velocity)
+        if rear_vehicle:
+            d = -ego_vehicle.lane_distance_to(rear_vehicle)
+            if d < self.REAR_DISTANCE_WANTED and d > 1.0:
+                self.brake_check = True
+                acceleration = self.COMFORT_ACC_MIN
+            else:
+                self.brake_check = False
         return acceleration
 
     def desired_gap(self, ego_vehicle, front_vehicle=None):
