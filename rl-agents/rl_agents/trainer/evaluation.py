@@ -5,7 +5,7 @@ import os
 from multiprocessing.pool import Pool
 from pathlib import Path
 import numpy as np
-from genetics import scores, scores_lock
+# from genetics import scores, scores_lock
 from tensorboardX import SummaryWriter
 
 import rl_agents.trainer.logger
