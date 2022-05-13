@@ -25,7 +25,7 @@ def gen_configs(filename, num_in_gen):
         for config_num in range(num_in_gen):
             temp_config = copy.deepcopy(config_json)
             for key in temp_config['rewards'].keys():
-                temp_config['rewards'][key] = temp_config['rewards'][key] + (200 * np.random.randn())
+                temp_config['rewards'][key] = temp_config['rewards'][key] + (1.5 * np.random.randn())
             new_configs.append(temp_config)
     return new_configs
 
