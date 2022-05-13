@@ -18,6 +18,7 @@ Options:
   --verbose              Set log level to debug instead of info.
   --repeat <times>       Repeat several times [default: 1].
 """
+from concurrent.futures import thread
 import time
 import datetime
 import os
@@ -48,6 +49,31 @@ def main():
     end = time.time()
     print('Elapsed time:', end - start, 'seconds.')
 
+# wrapper for the genetics.py to run training 
+# param: environment config (generated)
+# param: num episodes
+def main_genetics(env_config_path, episode_count, thread_num):
+    agent_config_path = "configs/HighwayEnv/Agents/DQNAgent/dqn.json"
+    options = {
+        "--episodes": episode_count,  # Number of episodes [default: 5].
+        "--no-display": True,         # Disable environment, agent, and rewards rendering.
+        "--name-from-config": True,   # Name the output folder from the corresponding config files
+        "--processes": 4,             # Number of running processes [default: 4].
+        "--seed": 42,                 # Seed the environments and agents.
+        "--train": True,              # Train the agent.
+        "--test": False,              # Test the agent.
+        "--verbose": False,           # Set log level to debug instead of info.
+        "--repeat": 1,                # Repeat several times [default: 1].
+        "--recover": False,
+        "--recover-from": "",
+        "genetics": {
+            "thread_num": thread_num, # -1 if control, <= 0 otherwise
+        }
+    }
+    return evaluate(env_config_path, agent_config_path, options)
+    
+
+
 
 def evaluate(environment_config, agent_config, options):
     """
@@ -61,6 +87,7 @@ def evaluate(environment_config, agent_config, options):
     if options['--verbose']:
         logger.configure(VERBOSE_CONFIG)
     env = load_environment(environment_config)
+    # print(env.config)
     agent = load_agent(agent_config, env)
     run_directory = None
     if options['--name-from-config']:
@@ -78,13 +105,14 @@ def evaluate(environment_config, agent_config, options):
                             display_env=not options['--no-display'],
                             display_agent=not options['--no-display'],
                             display_rewards=not options['--no-display'])
+
     if options['--train']:
         evaluation.train()
     elif options['--test']:
         evaluation.test()
     else:
         evaluation.close()
-    return os.path.relpath(evaluation.monitor.directory)
+    return evaluation.avg_score
 
 
 def benchmark(options):

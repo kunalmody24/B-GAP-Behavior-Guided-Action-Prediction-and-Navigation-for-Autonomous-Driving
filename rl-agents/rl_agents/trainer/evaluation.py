@@ -5,6 +5,7 @@ import os
 from multiprocessing.pool import Pool
 from pathlib import Path
 import numpy as np
+from genetics import scores, scores_lock
 from tensorboardX import SummaryWriter
 
 import rl_agents.trainer.logger
@@ -307,6 +308,14 @@ class Evaluation(object):
         self.writer.add_scalar('episode/total_reward', sum(rewards), episode)
         self.writer.add_scalar('episode/return', sum(r*gamma**t for t, r in enumerate(rewards)), episode)
         self.writer.add_histogram('episode/rewards', rewards, episode)
+
+        if episode == 0:
+            self.avg_score = sum(rewards)
+        else :
+            avg = self.avg_score * episode
+            avg += sum(rewards)
+            self.avg_score = avg / (episode + 1)
+
         logger.info("Episode {} score: {:.1f}".format(episode, sum(rewards)))
 
     def after_some_episodes(self, episode, rewards,
