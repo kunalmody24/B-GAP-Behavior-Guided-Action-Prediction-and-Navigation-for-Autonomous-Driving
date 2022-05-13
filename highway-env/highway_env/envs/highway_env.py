@@ -6,6 +6,8 @@ from highway_env import utils
 from highway_env.envs.common.abstract import AbstractEnv
 from highway_env.road.road import Road, RoadNetwork
 from highway_env.vehicle.control import MDPVehicle
+
+import random
  
 
 class HighwayEnv(AbstractEnv):
@@ -84,17 +86,29 @@ class HighwayEnv(AbstractEnv):
         vehicles_type2 = utils.class_from_path(self.config["aggressive_vehicle_type"])
         vehicles_type3 = utils.class_from_path(self.config["aggressive_vehicle_type2"])
         # add some aggressive vehicles in the road
-        for _ in range(self.config["num_aggressive"]):
-            a = np.random.randint(low=1, high=5)
-            if a == 1:
-                self.road.vehicles.append(vehicles_type3.create_random(self.road))
-            else:
-                self.road.vehicles.append(vehicles_type2.create_random(self.road))
+        # for _ in range(self.config["num_aggressive"]):
+        #     a = np.random.randint(low=1, high=5)
+        #     if a == 1 or a == 2:
+        #         self.road.vehicles.append(vehicles_type3.create_random(self.road))
+        #     else:
+        #         self.road.vehicles.append(vehicles_type2.create_random(self.road))
 
-        for _ in range(self.config["vehicles_count"]-self.config["num_aggressive"]):
+        # for _ in range(self.config["vehicles_count"] - self.config["num_aggressive"]):
+        #         self.road.vehicles.append(vehicles_type1.create_random(self.road))
+        count_aggressive = 0
+        for _ in range(self.config["vehicles_count"]+self.config["num_aggressive"]):
+            a = np.random.randint(low=1, high=5)
+            if a < 3 and count_aggressive < self.config["num_aggressive"]:
+                count_aggressive += 1
+                self.road.vehicles.append(vehicles_type2.create_random(self.road))
+                if count_aggressive < 5:
+                    count_aggressive += 1
+                    self.road.vehicles.append(vehicles_type3.create_random(self.road))
+
+            else:
                 self.road.vehicles.append(vehicles_type1.create_random(self.road))
-        
-        print("number of aggressive vehicles ", self.config["num_aggressive"])
+
+        print("number of aggressive vehicles ", count_aggressive)
 
         # create an empty list and then insert randomly
         
